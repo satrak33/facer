@@ -4,17 +4,17 @@ import cv2
 import face_recognition as fr
 import numpy as np
 
-source = 'https://192.168.0.101:8080/video'
+source = 'https://192.168.0.103:8080/video'
 
 
-def face_confidence(face_distance: float, face_match: float = 0.1) -> str:
+def face_confidence(face_distance: float, face_match: float = 0.6) -> str:
     range: float = (1.0 - face_match)
     linear_val: float = (1.0 - face_distance) / (range * 2.0)
 
     if face_distance > face_match:
         return str(round(linear_val * 100, 2)) + '%'
     else:
-        value = (linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2)) * 100)
+        value = (linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))) * 100
         return str(round(value, 2)) + '%'
 
 
@@ -38,7 +38,7 @@ class FaceRecognition:
 
         while True:
             ret, frame = vid.read()
-            if int(vid.get(1)) % 25 == 0:
+            if int(vid.get(1)) % 50 == 0:
                 small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
                 rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
@@ -73,7 +73,7 @@ class FaceRecognition:
                         cv2.rectangle(frame, (left, top - 35), (right, top), (0, 0, 255), -1)
                         cv2.putText(frame, name, (left + 6, top - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 1)
 
-                    cv2.imshow('face', frame)
+                cv2.imshow('face', frame)
 
             if cv2.waitKey(1) == ord('q'):
                 break
