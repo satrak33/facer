@@ -8,7 +8,7 @@ def save_faces():
     know_face_encodings: list = []
     know_face_names: list = []
 
-    for img in os.listdir('faces'):
+    for img in os.listdir('../faces'):
         # start = datetime.now()
 
         face_img = fr.load_image_file(f'faces/{img}')

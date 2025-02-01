@@ -6,9 +6,9 @@ scale1 = 3
 
 def main():
     video = cv2.VideoCapture(0)
-    video.open('https://192.168.0.102:8080/video')
+    video.open('https://192.168.0.101:8080/video')
 
-    facedetect = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    facedetect = cv2.CascadeClassifier('../assets/haarcascade_frontalface_default.xml')
 
     while True:
         ret, frame = video.read()
