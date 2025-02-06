@@ -12,7 +12,7 @@ def face_detect(img):
     faces = fr.face_locations(rgb_rame)
     print(faces)
     face_encoding = fr.face_encodings(rgb_rame, faces)
-    face_recognitions = np.load('../main module/know_face_encodings.npy')
+    face_recognitions = np.load('../know_face_encodings.npy')
     print(fr.compare_faces(face_recognitions, face_encoding))
 
     for (top, right, bottom, left) in faces:
