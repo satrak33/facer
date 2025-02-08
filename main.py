@@ -3,8 +3,9 @@ import cv2
 import numpy as np
 from datetime import datetime
 
-source = 'https://192.168.0.100:8080/video'
-
+source = 'https://192.168.0.101:8080/video'
+scale1 = 10
+scale2 = 1/scale1
 
 def face_confidence(face_distance, face_match=0.1):
     range: float = (1.0 - face_match)
@@ -32,7 +33,7 @@ class FaceRecognition:
         self.know_face_names = np.load('know_face_names.npy')
 
     def run_recognition(self):
-        vid = cv2.VideoCapture('0')
+        vid = cv2.VideoCapture()
         vid.open(source)
 
         print(f'\u001b[38;5;226mVideo FPS: {vid.get(cv2.CAP_PROP_FPS)}')
@@ -42,10 +43,10 @@ class FaceRecognition:
 
         while True:
             ret, frame = vid.read()
-            if int(vid.get(1)) % 50 == 0:
+            if int(vid.get(1)) % 25 == 0:
                 print(f'Time from last frame: {datetime.now() - i}')
                 i = datetime.now()
-                small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+                small_frame = cv2.resize(frame, (0, 0), fx=scale2, fy=scale2)
                 rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                 self.face_locations = fr.face_locations(rgb_small_frame)
 
@@ -72,10 +73,10 @@ class FaceRecognition:
                         print(f'{name} ({confidence})')
 
                     for (top, right, bottom, left), name in zip(self.face_locations, self.face_names):
-                        top *= 2
-                        right *= 2
-                        bottom *= 2
-                        left *= 2
+                        top *= scale1
+                        right *= scale1
+                        bottom *= scale1
+                        left *= scale1
 
                         color = (255, 0, 0) if name == 'Unknown' else (0, 255, 0)
 
@@ -88,7 +89,7 @@ class FaceRecognition:
             if cv2.waitKey(1) == ord('q'):
                 break
 
-        vid.release()
+        # vid.release()
         cv2.destroyAllWindows()
 
 
