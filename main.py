@@ -78,18 +78,20 @@ class FaceRecognition:
                         bottom *= scale1
                         left *= scale1
 
-                        color = (255, 0, 0) if name == 'Unknown' else (0, 255, 0)
+                        print(name)
+                        color = (0, 0, 255) if name == 'Unknown ((Unknown))' else (0, 255, 0)
 
                         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
                         cv2.rectangle(frame, (left, top - 35), (right, top), color, -1)
                         cv2.putText(frame, name, (left + 6, top-6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1)
 
+                frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
                 cv2.imshow('face', frame)
 
             if cv2.waitKey(1) == ord('q'):
                 break
 
-        # vid.release()
+        vid.release()
         cv2.destroyAllWindows()
 
 
