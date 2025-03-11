@@ -31,7 +31,6 @@ class FaceRecognition:
         self.load_encodings()
 
     def load_encodings(self):
-        """ Загружает известные лица из файлов. """
         if ENCODINGS_PATH.exists() and NAMES_PATH.exists():
             self.known_face_encodings = np.load(ENCODINGS_PATH, allow_pickle=True)
             self.known_face_names = np.load(NAMES_PATH, allow_pickle=True)
