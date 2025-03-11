@@ -2,99 +2,109 @@ import face_recognition as fr
 import cv2
 import numpy as np
 from datetime import datetime
+from pathlib import Path
+from loguru import logger
 
-source = 'https://192.168.0.101:8080/video'
-scale1 = 10
-scale2 = 1/scale1
+VIDEO_SOURCE = 'ch01_20250222095355.mp4'
+SCALE_FACTOR = 1
+FRAME_SKIP = 10
+ROI = (800, 100, 500, 500)
+ENCODINGS_PATH = Path("know_face_encodings.npy")
+NAMES_PATH = Path("know_face_names.npy")
 
-def face_confidence(face_distance, face_match=0.1):
-    range: float = (1.0 - face_match)
-    linear_val: float = (1.0 - face_distance) / (range * 2.0)
+
+def face_confidence(face_distance: float, face_match=0.6) -> str:
+    range_val = (1.0 - face_match)
+    linear_val = (1.0 - face_distance) / (range_val * 2.0)
 
     if face_distance > face_match:
-        return str(round(linear_val * 100, 2)) + '%'
+        return f"{round(linear_val * 100, 2)}%"
     else:
-        value = (linear_val + ((1.0 - linear_val) * pow((linear_val - 0.5) * 2, 0.2)) * 100)
-        return str(round(value, 2)) + '%'
+        adjusted_val = linear_val + ((1.0 - linear_val) * ((linear_val - 0.5) * 2) ** 0.2)
+        return f"{round(adjusted_val * 100, 2)}%"
 
 
 class FaceRecognition:
-    face_locations: list = []
-    face_encodings: list = []
-    face_names: list = []
-    know_face_encodings: list = []
-    know_face_names: list = []
-
     def __init__(self):
-        self.encode_faces()
+        self.known_face_encodings = []
+        self.known_face_names = []
+        self.load_encodings()
 
-    def encode_faces(self):
-        self.know_face_encodings = np.load('know_face_encodings.npy')
-        self.know_face_names = np.load('know_face_names.npy')
+    def load_encodings(self):
+        """ Загружает известные лица из файлов. """
+        if ENCODINGS_PATH.exists() and NAMES_PATH.exists():
+            self.known_face_encodings = np.load(ENCODINGS_PATH, allow_pickle=True)
+            self.known_face_names = np.load(NAMES_PATH, allow_pickle=True)
+        else:
+            raise FileNotFoundError("Файлы с энкодингами лиц не найдены!")
 
     def run_recognition(self):
-        vid = cv2.VideoCapture()
-        vid.open(source)
+        vid = cv2.VideoCapture(VIDEO_SOURCE)
 
-        print(f'\u001b[38;5;226mVideo FPS: {vid.get(cv2.CAP_PROP_FPS)}')
         if not vid.isOpened():
-            raise "Video not found"
-        i = datetime.now()
+            raise ValueError("Видео не найдено или не может быть открыто!")
+
+        logger.debug(f"Video width: {vid.get(cv2.CAP_PROP_FRAME_WIDTH)}")
+        logger.debug(f"Video height: {vid.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+        logger.debug(f"Video FPS: {vid.get(cv2.CAP_PROP_FPS)}")
+
+        last_frame_time = datetime.now()
 
         while True:
             ret, frame = vid.read()
-            if int(vid.get(1)) % 25 == 0:
-                print(f'Time from last frame: {datetime.now() - i}')
-                i = datetime.now()
-                small_frame = cv2.resize(frame, (0, 0), fx=scale2, fy=scale2)
+            if not ret:
+                break
+
+            x, y, w, h = ROI
+            frame = frame[y:y + h, x:x + w]
+
+            if int(vid.get(cv2.CAP_PROP_POS_FRAMES)) % FRAME_SKIP == 0:
+                logger.debug(f"Time from last frame: {datetime.now() - last_frame_time}")
+                last_frame_time = datetime.now()
+
+                small_frame = cv2.resize(frame, (0, 0), fx=1/SCALE_FACTOR, fy=1/SCALE_FACTOR)
                 rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                self.face_locations = fr.face_locations(rgb_small_frame)
 
-                start = datetime.now()
-                self.face_encodings = fr.face_encodings(rgb_small_frame, self.face_locations)
-                print(f'\u001b[38;5;14m{self.face_encodings}\u001b[0m')
-                print(f'\u001b[38;5;226mTime for encoding: {datetime.now() - start}')
+                face_locations = fr.face_locations(rgb_small_frame)
+                start_time = datetime.now()
+                face_encodings = fr.face_encodings(rgb_small_frame, face_locations)
 
-                if self.face_encodings:
-                    self.face_names = []
-                    for face_encoding in self.face_encodings:
-                        matches: list = fr.compare_faces(self.know_face_encodings, face_encoding)
-                        name: str = 'Unknown'
-                        confidence: str = '(Unknown)'
+                logger.debug(f"Face encodings: {face_encodings}")
+                logger.debug(f"Time for encoding: {datetime.now() - start_time}")
 
-                        face_distances = fr.face_distance(self.know_face_encodings, face_encoding)
-                        best_match_index = np.argmin(face_distances)
+                face_names = []
+                for face_encoding in face_encodings:
+                    matches = fr.compare_faces(self.known_face_encodings, face_encoding)
+                    name, confidence = "Unknown", "(Unknown)"
 
-                        if matches[best_match_index]:
-                            name = self.know_face_names[best_match_index]
-                            confidence = face_confidence(face_distances[best_match_index])
+                    face_distances = fr.face_distance(self.known_face_encodings, face_encoding)
+                    best_match_index = np.argmin(face_distances)
 
-                        self.face_names.append(f'{name} ({confidence})')
-                        print(f'{name} ({confidence})')
+                    if matches[best_match_index]:
+                        name = self.known_face_names[best_match_index]
+                        confidence = face_confidence(face_distances[best_match_index])
 
-                    for (top, right, bottom, left), name in zip(self.face_locations, self.face_names):
-                        top *= scale1
-                        right *= scale1
-                        bottom *= scale1
-                        left *= scale1
+                    face_names.append(f"{name} ({confidence})")
+                    logger.debug(f"{name} ({confidence})")
 
-                        print(name)
-                        color = (0, 0, 255) if name == 'Unknown ((Unknown))' else (0, 255, 0)
+                for (top, right, bottom, left), name in zip(face_locations, face_names):
+                    top, right, bottom, left = [int(coord * SCALE_FACTOR) for coord in (top, right, bottom, left)]
+                    color = (0, 0, 255) if name.startswith("Unknown") else (0, 255, 0)
 
-                        cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-                        cv2.rectangle(frame, (left, top - 35), (right, top), color, -1)
-                        cv2.putText(frame, name, (left + 6, top-6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1)
+                    cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+                    cv2.rectangle(frame, (left, top - 35), (right, top), color, -1)
+                    cv2.putText(frame, name, (left + 6, top - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1)
 
                 frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-                cv2.imshow('face', frame)
+                cv2.imshow("Face Recognition", frame)
 
-            if cv2.waitKey(1) == ord('q'):
+            if cv2.waitKey(1) == ord("q"):
                 break
 
         vid.release()
         cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
-    frec = FaceRecognition()
-    frec.run_recognition()
+if __name__ == "__main__":
+    recognizer = FaceRecognition()
+    recognizer.run_recognition()

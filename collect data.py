@@ -1,6 +1,5 @@
 import numpy as np
 import os
-from datetime import datetime
 import face_recognition as fr
 
 
