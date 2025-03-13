@@ -152,3 +152,4 @@ cython_debug/
 
 # video & image files
 *.mp4
+*.jpg
