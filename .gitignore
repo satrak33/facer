@@ -151,4 +151,4 @@ cython_debug/
 .idea/
 
 # video & image files
-.mp4
+*.mp4
