@@ -12,12 +12,7 @@ def save_faces():
     for img in os.listdir('faces'):  # Перебір всіх зображень у папці 'faces'
         log.debug(f"Processing {img}")
         face_img = fr.load_image_file(f'faces/{img}')  # Завантаження зображення
-        try:
-            face_encoding = fr.face_encodings(face_img)[0]  # Отримання векторного представлення обличчя
-        except IndexError:
-            log.error(f"Image {img} has no face")
-
-            continue
+        face_encoding = fr.face_encodings(face_img)[0]  # Отримання векторного представлення обличчя
 
         know_face_encodings.append(face_encoding)  # Додавання вектора до списку
         know_face_names.append(img[:-4])  # Видалення розширення файлу та збереження імені
