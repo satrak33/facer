@@ -10,7 +10,8 @@ dependencies = [
     "face-recognition-models>=0.3.0",
     "loguru>=0.7.3",
     "opencv-python>=4.11.0.86",
+    "setuptools>=79.0.1",
 ]
 
 [tool.uv.sources]
-dlib = { path = "dlib-19.22.99-cp39-cp39-win_amd64.whl" }
+dlib = { url = "https://github.com/z-mahmud22/Dlib_Windows_Python3.x/raw/main/dlib-19.22.99-cp39-cp39-win_amd64.whl" }
