@@ -7,7 +7,7 @@ from loguru import logger as log
 
 # Параметри відео та розпізнавання
 # VIDEO_SOURCE = Path("ip")  # Джерело відео
-SCALE_FACTOR = 1  # Коефіцієнт зменшення зображення (1 - без змін)
+SCALE_FACTOR = 2  # Коефіцієнт зменшення зображення (1 - без змін)
 FRAME_SKIP = 50  # Пропуск кадрів для обробки (щоб не перевантажувати процесор)
 ENCODINGS_PATH = Path("data/know_face_encodings.npy")  # Шлях до збережених енкодингів облич
 NAMES_PATH = Path("data/know_face_names.npy")  # Шлях до збережених імен
@@ -24,6 +24,33 @@ class FaceRecognition:
         """Завантаження збережених енкодингів імен та облич."""
         self.known_face_encodings = np.load(ENCODINGS_PATH, allow_pickle=True)
         self.known_face_names = np.load(NAMES_PATH, allow_pickle=True)
+
+
+    @log.catch
+    def mark_faces(self, frame, face_locations, face_names):
+        """Маркування/обведення облич у кадрі."""
+        for (top, right, bottom, left), name in zip(face_locations, face_names):
+            top, right, bottom, left = [int(coord * SCALE_FACTOR) for coord in (top, right, bottom, left)]
+            color = (0, 0, 255) if name.startswith("Unknown") else (0, 255, 0)
+
+            cv2.rectangle(
+                img=frame,
+                pt1=(left, top), pt2=(right, bottom),
+                color=color, thickness=2
+            )
+            cv2.rectangle(
+                img=frame,
+                pt1=(left, top - 35), pt2=(right, top),
+                color=color, thickness=-1
+            )
+            cv2.putText(
+                img=frame,
+                text=name, org=(left + 6, top - 6),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.5,
+                color=(0, 0, 0), thickness=1
+            )
+
+        return frame
 
 
     @log.catch
@@ -48,13 +75,8 @@ class FaceRecognition:
 
             face_names.append(name)
 
-        for (top, right, bottom, left), name in zip(face_locations, face_names):
-            top, right, bottom, left = [int(coord * SCALE_FACTOR) for coord in (top, right, bottom, left)]
-            color = (0, 0, 255) if name.startswith("Unknown") else (0, 255, 0)
 
-            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-            cv2.rectangle(frame, (left, top - 35), (right, top), color, -1)
-            cv2.putText(frame, name, (left + 6, top - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1)
+        frame = self.mark_faces(frame, face_locations, face_names)
 
         return frame
 
@@ -68,10 +90,6 @@ class FaceRecognition:
 
         while True:
             ret, frame = vid.read()
-            if not ret:
-                log.error("Відео не знайдено або не може бути відкрито!")
-                break
-
             frame = self.process_frame(frame)  # Обробка кадру
             cv2.imshow("Face Recognition", frame)
 
